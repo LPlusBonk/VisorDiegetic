@@ -1,0 +1,18 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+        maven { name = "Fabric"; url = "https://maven.fabricmc.net/" }
+        maven { name = "Architectury"; url = "https://maven.architectury.dev/" }
+        // Architectury Loom pulls build-time libraries from these even for a Fabric-only project
+        maven { name = "Forge"; url = "https://maven.minecraftforge.net/" }
+        maven { name = "NeoForge"; url = "https://maven.neoforged.net/releases/" }
+    }
+}
+
+plugins {
+    // Downloads a JDK when the one required by java_version is not installed
+    id "org.gradle.toolchains.foojay-resolver-convention" version "1.0.0"
+}
+
+rootProject.name = "VisorDiegetic"

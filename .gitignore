@@ -1,0 +1,20 @@
+.gradle/
+build/
+run/
+
+# Editor / language server
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+bin/
+
+# Local run output pasted for debugging
+build.log
+
+# Agent tooling: local-only state. Shared settings under .claude/ may be committed.
+.claude/worktrees/
+.claude/settings.local.json

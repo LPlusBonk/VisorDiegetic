@@ -1,0 +1,70 @@
+plugins {
+    id "java"
+    // Same Loom build Visor and VisorEssentials use. Minecraft 26.1+ ships unobfuscated, hence "no-remap".
+    id "dev.architectury.loom-no-remap" version "1.17.493"
+}
+
+group = "io.github.lplusbonk"
+version = "${mod_version}+mc${minecraft_version}"
+base.archivesName = "VisorDiegetic"
+
+def javaVersion = java_version as int
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
+    withSourcesJar()
+}
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+    options.release = javaVersion
+}
+
+repositories {
+    mavenCentral()
+    maven { name = "Fabric"; url = "https://maven.fabricmc.net/" }
+    exclusiveContent {
+        forRepository { maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" } }
+        filter { includeGroup "maven.modrinth" }
+    }
+}
+
+def visorArtifact = "maven.modrinth:visor:${visor_version}+mc${minecraft_version}-fabric"
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+
+    implementation "net.fabricmc:fabric-loader:${fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}+${minecraft_version}"
+
+    // Compile against Visor's public API only; the full mod is on the classpath just for runClient.
+    compileOnly "${visorArtifact}:api"
+    runtimeOnly visorArtifact
+
+    compileOnly "org.projectlombok:lombok:${lombok_version}"
+    annotationProcessor "org.projectlombok:lombok:${lombok_version}"
+    compileOnly "org.jetbrains:annotations:${jetbrains_annotations_version}"
+}
+
+loom {
+    mods {
+        create(mod_id) { sourceSet sourceSets.main }
+    }
+}
+
+def resourcePlaceholders = [
+        mod_id               : mod_id,
+        mod_name             : mod_name,
+        mod_version          : mod_version,
+        mod_description      : mod_description,
+        mod_authors          : mod_authors,
+        mod_license          : mod_license,
+        minecraft_version    : minecraft_version,
+        java_version         : java_version,
+        fabric_loader_version: fabric_loader_version,
+        visor_version        : visor_version,
+]
+processResources {
+    inputs.properties(resourcePlaceholders)
+    filesMatching("fabric.mod.json") {
+        expand(resourcePlaceholders)
+    }
+}
