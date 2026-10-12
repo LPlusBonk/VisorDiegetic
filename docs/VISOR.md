@@ -102,6 +102,12 @@ Two approaches stay inside the API.
 1. Listen for `ActionButtonVREvent` and match `getActionButton().getId()` against `hotbar_main` and `hotbar_offhand`. `isPressEvent()` tells a press from a release. The event is cancelable, and a canceled event skips the action's `onPress` or `onRelease`. `TaskHotBar` opens the radial hotbar only from those two calls, so canceling both events also turns the radial hotbar off. This approach follows whatever button the player bound to the hotbar. That is the grip by default on four of the seven profiles.
 2. Read the button itself. `VisorAPI.client().getInputManager().getProfileManager().getActiveProfile()` returns the current `XRInteractionProfile`, or null. `ActionBinding.getButton(profile, leftHanded)` returns a `VRActionDataButton` with `isPressed()` and `isButtonChanged()`. This works whichever set is active and always reads the physical grip. It does not stop the action that Visor has bound to the same button.
 
+Checked by running in a headset with Quest 2 controllers and VisorEssentials absent: the first approach works. A listener registered in `onAddonLoad` with `VisorAPI.eventBus().registerListener(addon, listener)` receives a press and a release for each grip. `triggerHapticPulse(hand, seconds)` from `VisorAPI.client().getInputManager()` pulses the matching controller. Canceling both events keeps the radial hotbar closed.
+
+The events stop while any screen is open, because the `game` action set is inactive then. This includes the pause menu, the inventory, and a chest. Visor draws the hands as plain blocks in that state.
+
+VisorEssentials changes this. It cancels the opening of a container screen and shows a panel in its place, so no screen is open and the `game` set stays active. Grip events should then still arrive while one of its panels is open. This was read from source and not run.
+
 `VRActionDataButton` reports pressed or not pressed. Whether the API exposes the analog squeeze value is not yet known.
 
 ## Drawing in the world

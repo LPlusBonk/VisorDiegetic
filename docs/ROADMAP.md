@@ -22,7 +22,7 @@ Each milestone proves one risk before the next one builds on it.
 | #   | Milestone                                                                      | Proves                                         | Status      |
 | --- | ------------------------------------------------------------------------------ | ---------------------------------------------- | ----------- |
 | 1   | Project builds and loads as a Visor addon                                      | Toolchain and the Visor dependency work        | Done        |
-| 2   | Debug marker on each hand, haptic pulse on grip                                | The mod can read hand poses and the grip input | In progress |
+| 2   | Debug marker on each hand, haptic pulse on grip                                | The mod can read hand poses and the grip input | Done        |
 | 3   | Torso estimator with debug markers at chest, waist, and beside the head        | Body anchors hold still when the head turns    | Not started |
 | 4   | One body slot that stores and returns a stack, with the server moving the item | The held-item model works end to end           | Not started |
 | 5   | Remaining first-build features                                                 |                                                | Not started |
@@ -31,7 +31,7 @@ Milestone 5 covers the other body slots, all cues, the view-edge display, the st
 
 Milestone 1 was checked by running the development client without a VR runtime. Visor registered and loaded the addon. The development client has since started a VR session in a headset with the addon loaded. [DEVELOPMENT.md](DEVELOPMENT.md#running-in-vr-on-linux) records the configuration.
 
-Milestone 2 has its hand markers. `DebugHandGizmos` draws one on each hand, checked in a headset. The haptic pulse on grip remains.
+Milestone 2 was checked in a headset. `DebugHandGizmos` draws a marker on each hand, and each grip press pulses its own controller. [VISOR.md](VISOR.md#reading-the-grip-during-play) records how the mod reads the grip.
 
 ## Later builds
 
@@ -48,6 +48,7 @@ Each of these is independent of the others and builds on the first build.
 - Slots detect hands by proximity and contact only. Each slot has a trigger volume significantly larger than its visual. When volumes overlap, the nearest slot wins. Pointing is reserved for placing blocks and manual pickup.
 - Body slot count and positions are data. A file defines the layout so it can change without code changes. The first build has no in-game layout editor.
 - A layout may define more than one position for the same slot. The helmet slot uses this, with one position on each side of the head.
+- The mod reads the grip by listening for `ActionButtonVREvent` on Visor's `hotbar_main` and `hotbar_offhand` actions, and cancels those events to turn the radial hotbar off. This needs no mixin. See [VISOR.md](VISOR.md#reading-the-grip-during-play).
 - The mod keeps its own record of what each hand holds. Visor's two-handed mode can only point the off hand at a hotbar slot, and goal 1 needs a hand to hold any stack. See [VISOR.md](VISOR.md#held-items).
 - The mod estimates the torso itself. Visor's body yaw is the head yaw. See [VISOR.md](VISOR.md#body-tracking).
 - The mod runs alongside VisorEssentials and replaces only its inventory feature. See [VISOR.md](VISOR.md#coexistence).
@@ -56,11 +57,11 @@ Each of these is independent of the others and builds on the first build.
 
 ## Open questions
 
-- How the mod reads the grip. Visor has no grip action, and an addon cannot use its own action set during play. [VISOR.md](VISOR.md#reading-the-grip-during-play) describes two candidates. Milestone 2 picks one and tests it in a headset.
 - Whether the API exposes the analog squeeze value of the grip, and whether grip holding needs it.
 - Where a held stack lives on the server. Vanilla has a selected hotbar slot, one off-hand slot, and the cursor stack of an open menu. Milestone 4 needs an answer.
 - Whether body slot assignments need their own synced state, or whether clients can derive them from vanilla inventory data.
-- How to turn off Visor's radial hotbar from an addon. Canceling `ActionButtonVREvent` for `hotbar_main` and `hotbar_offhand` is a candidate, read from source and not yet run. See [VISOR.md](VISOR.md#reading-the-grip-during-play).
+- Whether the mod keeps reading the grip through the radial hotbar actions. It works on the controller profiles that bind the grip to them by default, and it follows the player's binding on the others. Reading the button directly is the alternative. See [VISOR.md](VISOR.md#reading-the-grip-during-play).
+- How grip input behaves while a VisorEssentials panel is open.
 - How a held bow and arrows behave under grip holding, and how that fits with the VisorEssentials bow.
 - The length of the grace window.
 - Which stack the stomach slot previews when the inventory holds several partial stacks of the held item.
