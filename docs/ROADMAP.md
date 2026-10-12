@@ -22,7 +22,7 @@ Each milestone proves one risk before the next one builds on it.
 | #   | Milestone                                                                      | Proves                                         | Status      |
 | --- | ------------------------------------------------------------------------------ | ---------------------------------------------- | ----------- |
 | 1   | Project builds and loads as a Visor addon                                      | Toolchain and the Visor dependency work        | Done        |
-| 2   | Debug marker on each hand, haptic pulse on grip                                | The mod can read hand poses and the grip input | Not started |
+| 2   | Debug marker on each hand, haptic pulse on grip                                | The mod can read hand poses and the grip input | In progress |
 | 3   | Torso estimator with debug markers at chest, waist, and beside the head        | Body anchors hold still when the head turns    | Not started |
 | 4   | One body slot that stores and returns a stack, with the server moving the item | The held-item model works end to end           | Not started |
 | 5   | Remaining first-build features                                                 |                                                | Not started |
@@ -30,6 +30,8 @@ Each milestone proves one risk before the next one builds on it.
 Milestone 5 covers the other body slots, all cues, the view-edge display, the stomach slot and inventory grid, armor slots, the pickup rule, and turning off the features this mod replaces. See [VISOR.md](VISOR.md#coexistence).
 
 Milestone 1 was checked by running the development client without a VR runtime. Visor registered and loaded the addon. The development client has since started a VR session in a headset with the addon loaded. [DEVELOPMENT.md](DEVELOPMENT.md#running-in-vr-on-linux) records the configuration.
+
+Milestone 2 has its hand markers. `DebugHandGizmos` draws one on each hand, checked in a headset. The haptic pulse on grip remains.
 
 ## Later builds
 
