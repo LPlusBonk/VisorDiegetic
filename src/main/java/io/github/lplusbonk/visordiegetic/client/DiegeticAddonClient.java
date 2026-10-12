@@ -3,12 +3,14 @@ package io.github.lplusbonk.visordiegetic.client;
 import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.vmstudio.visor.api.VisorAPI;
 import org.vmstudio.visor.api.common.addon.VisorAddon;
 import io.github.lplusbonk.visordiegetic.VisorDiegetic;
 
 public class DiegeticAddonClient implements VisorAddon {
     @Override
     public void onAddonLoad() {
+        VisorAPI.eventBus().registerListener(this, new GripListener());
         VisorDiegetic.LOGGER.info("{} client addon loaded", VisorDiegetic.MOD_NAME);
     }
 
