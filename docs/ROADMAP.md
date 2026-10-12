@@ -29,7 +29,7 @@ Each milestone proves one risk before the next one builds on it.
 
 Milestone 5 covers the other body slots, all cues, the view-edge display, the stomach slot and inventory grid, armor slots, the pickup rule, and turning off the features this mod replaces. See [VISOR.md](VISOR.md#coexistence).
 
-Milestone 1 was checked by running the development client without a VR runtime. Visor registered and loaded the addon. Nothing has run in a headset yet.
+Milestone 1 was checked by running the development client without a VR runtime. Visor registered and loaded the addon. The development client has since started a VR session in a headset with the addon loaded. [DEVELOPMENT.md](DEVELOPMENT.md#running-in-vr-on-linux) records the configuration.
 
 ## Later builds
 

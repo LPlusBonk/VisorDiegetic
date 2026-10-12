@@ -34,6 +34,8 @@ The Gradle wrapper downloads Gradle. Do not install it separately.
 
 Start the OpenXR runtime before `runClient`. Without one, Visor logs `XR_ERROR_RUNTIME_UNAVAILABLE`, sets its play mode to `DISABLED`, and the game runs flat.
 
+A healthy VR start contains `VR session INIT SUCCESS`. [Running in VR on Linux](#running-in-vr-on-linux) covers the cases where it does not.
+
 The development client signs in as an offline placeholder account. Single-player works, and so does a local server with `online-mode=false`.
 
 These log entries are expected in a development client:
@@ -46,6 +48,37 @@ These log entries are expected in a development client:
 | `Failed to set window icon` | The Wayland compositor lacks the icon protocol. |
 
 A healthy start contains `Visor Diegetic client addon loaded`.
+
+## Running in VR on Linux
+
+These findings apply to Visor 0.6.0-beta on Minecraft 26.3. Each one was hit and resolved on one machine: Wayland, an AMD integrated GPU with an NVIDIA discrete GPU, and WiVRn as the OpenXR runtime. The working configuration at the end ran in a headset.
+
+Visor needs Minecraft's OpenGL renderer. Minecraft 26.3 also has a Vulkan renderer and switches to it without stopping when OpenGL fails to load. Set `preferredGraphicsBackend:"opengl"` in `run/options.txt` so that a failure is visible. The log line `Using graphics backend` names the renderer in use.
+
+Visor has its own setting for how it passes frames to the OpenXR runtime. It is `graphics_api` in `run/config/Visor/settings.yml`, and Graphics API in Visor's rendering settings. The values are `AUTO`, `OPENGL`, and `VULKAN`. `VULKAN` still renders the game with OpenGL and copies each frame to a Vulkan image. `AUTO` picks OpenGL when the runtime accepts it.
+
+| Symptom in the log | Cause | Fix |
+|---|---|---|
+| `Invalid GLX major version: 0` after `Initializing VR session...` | Minecraft opened a Wayland window. Visor's OpenGL path needs GLX, which only an X11 window has. | Set `graphics_api: VULKAN`. |
+| `Vulkan bridge tier: CPU_STAGING`, then a `NullPointerException` in `XRVulkanBridge.transferCpuStaging` | Minecraft renders on one GPU and the OpenXR runtime uses another. The fallback that copies frames between them fails on its first frame. | Run Minecraft on the GPU the runtime uses. |
+| `Failed to create backend OpenGL`, then `Using graphics backend Vulkan` | OpenGL failed to load. This happened with `SDL_VIDEODRIVER=x11` on the hybrid GPU machine, and the cause was not found. | Stay on Wayland and use the configuration below. |
+
+The working configuration on that machine:
+
+- `preferredGraphicsBackend:"opengl"` in `run/options.txt`.
+- `graphics_api: VULKAN` in `run/config/Visor/settings.yml`.
+- A Wayland window, which is the default.
+- Minecraft on the NVIDIA GPU, which WiVRn also uses:
+
+```
+__NV_PRIME_RENDER_OFFLOAD=1 __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json ./gradlew runClient
+```
+
+A Wayland window gets its OpenGL context through EGL, so the EGL vendor variable selects the GPU. `prime-run` sets the GLX vendor only and has no effect here.
+
+The log then contains `Using graphics device: NVIDIA`, `Vulkan bridge tier: ZERO_COPY`, and `VR session INIT SUCCESS`.
+
+`run/` is not in version control, so each checkout needs the two settings again.
 
 ## Layout
 
