@@ -54,10 +54,11 @@ Each of these is independent of the others and builds on the first build.
 
 ## Open questions
 
-- How Visor exposes the physical grip button. The API has an action framework, and no action named for the grip turned up at first glance. Milestone 2 answers this.
+- How the mod reads the grip. Visor has no grip action, and an addon cannot use its own action set during play. [VISOR.md](VISOR.md#reading-the-grip-during-play) describes two candidates. Milestone 2 picks one and tests it in a headset.
+- Whether the API exposes the analog squeeze value of the grip, and whether grip holding needs it.
 - Where a held stack lives on the server. Vanilla has a selected hotbar slot, one off-hand slot, and the cursor stack of an open menu. Milestone 4 needs an answer.
 - Whether body slot assignments need their own synced state, or whether clients can derive them from vanilla inventory data.
-- How to turn off Visor's radial hotbar from an addon.
+- How to turn off Visor's radial hotbar from an addon. Canceling `ActionButtonVREvent` for `hotbar_main` and `hotbar_offhand` is a candidate, read from source and not yet run. See [VISOR.md](VISOR.md#reading-the-grip-during-play).
 - How a held bow and arrows behave under grip holding, and how that fits with the VisorEssentials bow.
 - The length of the grace window.
 - Which stack the stomach slot previews when the inventory holds several partial stacks of the held item.

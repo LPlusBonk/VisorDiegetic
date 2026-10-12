@@ -36,7 +36,8 @@ Checked by running: Visor registers and loads this mod's addon.
 | Hand and controller poses | `VRLocalPlayer.getRawController(HandType)`, `getRawHands()`, and the processed `VRPlayerPoseClient` with `getMainHand()`, `getOffhand()`, `getHmd()`. |
 | Hand joints               | `RawHand.getJoint(VRHandJointType)`, 26 joints in OpenXR order.                                                                                       |
 | Haptics                   | `VRInputManager.triggerHapticPulse(HandType, frequency, amplitude, durationNanoSec)` and the constants in `HapticFeedback`.                           |
-| Button input              | The action framework in `client.input.action`, and `ActionButtonVREvent` for presses and releases.                                                    |
+| Button input              | The action framework in `client.input.action`, and `ActionButtonVREvent` for presses and releases. See [Input actions](#input-actions).               |
+| World-space drawing       | `RenderPipelineStageVREvent` and `VRGameEffect`. See [Drawing in the world](#drawing-in-the-world).                                                   |
 | Swing detection           | `SwingEntityVREvent` and `SwingBlockVREvent`.                                                                                                         |
 | Held item pose            | `VRHandItemPose`, registered with `@RegisterVRItemPose`.                                                                                              |
 | Hand rendering mode       | `HandRenderStateVREvent`.                                                                                                                             |
@@ -46,6 +47,81 @@ Checked by running: Visor registers and loads this mod's addon.
 | Events                    | Listeners marked `@VREventHandler`, registered on `VisorAPI.eventBus()`.                                                                              |
 
 Visor already sends each player's head, hand, and tracker poses to the server, and the server relays them to nearby clients.
+
+## Input actions
+
+Read from source. Nothing in this section has run in a headset.
+
+### Actions and bindings
+
+A `VRAction` reads one controller input and belongs to one `VRActionSet`. `VRActionButton` is the base class for a button. A subclass implements `onPress`, `onRelease`, and `getDefaultBindings()`.
+
+`getDefaultBindings()` returns one `ActionBinding` per `VRInteractionProfileType`. A profile type is a controller family, such as `OCULUS_TOUCH` or `VALVE_INDEX`. `new ActionBinding(rightHandedId, leftHandedId)` takes the button for a right-handed player first. `ActionBinding.EMPTY` leaves the action unbound on that profile.
+
+Visor has no action named for the grip. The grip is a button id, a constant on the profile class of each controller family in `me.phoenixra.atumvr.api.input.profile.types`. An example is `OculusTouchProfile.BUTTON_GRIP_RIGHT`. Visor's own actions take the grip by default:
+
+| Profile                                                      | Default action on the grip                    |
+| ------------------------------------------------------------ | --------------------------------------------- |
+| `OCULUS_TOUCH`, `VIVE_COSMOS`, `HP_MIXED_REALITY`, `STEAM_FRAME` | The radial hotbar, `hotbar_main` and `hotbar_offhand` |
+| `VIVE`, `WINDOWS_MOTION`                                     | Right mouse                                   |
+| `VALVE_INDEX`                                                | Middle mouse, on the grip force button        |
+
+The player can rebind every action in Visor's settings. Visor stores the bindings of a set in `controls/<set id>.json`.
+
+### Registration
+
+Visor registers a `VRActionSet` subclass when the class meets three conditions:
+
+- It carries `@RegisterActionSet`.
+- It has a public constructor that takes one `VisorAddon`.
+- It is in the package that `getAddonPackagePath` names, or in a subpackage.
+
+`AddonManagerImpl.loadAddon` passes the addon to every component registry and then calls `onAddonLoad`. Each registry asks `ModLoader.getClassesAnnotated` for its annotation. On Fabric that method walks the class files under the package and reads their annotations with ASM, without initialising the classes. `ActionSetRegistry` then calls the constructor by reflection. It logs a failure and continues with the next class.
+
+The `VRActionSet` constructor calls `loadActions()`. Fields of the subclass are not yet assigned at that point.
+
+Checked by compiling: a class that uses `OculusTouchProfile`, `VRInteractionProfileType`, and `ActionBinding` compiles against the `api` jar alone. That jar bundles the `me.phoenixra.atumvr` and `me.phoenixra.atumconfig` packages.
+
+### One active set
+
+Only one action set is active at a time. Each tick `VRInputManagerImpl.preTick` takes the first set, in priority order, whose `isEnabledAndCanActivate()` returns true. Only that set's actions update. Sets of equal priority keep their registration order, and the core addon registers first.
+
+Visor's `game` set is active while a player exists and no screen is open. Its `menu` set is active while a screen is open. Both have normal priority.
+
+This rules out a separate action set for the grip:
+
+- An addon set of normal priority that activates during play never becomes active, because `game` comes first.
+- An addon set of higher priority replaces `game`, and movement, turning, and jumping stop.
+- `VRActionSet` has no public method that adds an action to an existing set. `addKeyAction` accepts keyboard key actions only.
+- A set registered with the id `game` replaces Visor's set. The movement, turn, and jump actions it would need are in `visor-core`.
+
+### Reading the grip during play
+
+Two approaches stay inside the API.
+
+1. Listen for `ActionButtonVREvent` and match `getActionButton().getId()` against `hotbar_main` and `hotbar_offhand`. `isPressEvent()` tells a press from a release. The event is cancelable, and a canceled event skips the action's `onPress` or `onRelease`. `TaskHotBar` opens the radial hotbar only from those two calls, so canceling both events also turns the radial hotbar off. This approach follows whatever button the player bound to the hotbar. That is the grip by default on four of the seven profiles.
+2. Read the button itself. `VisorAPI.client().getInputManager().getProfileManager().getActiveProfile()` returns the current `XRInteractionProfile`, or null. `ActionBinding.getButton(profile, leftHanded)` returns a `VRActionDataButton` with `isPressed()` and `isButtonChanged()`. This works whichever set is active and always reads the physical grip. It does not stop the action that Visor has bound to the same button.
+
+`VRActionDataButton` reports pressed or not pressed. Whether the API exposes the analog squeeze value is not yet known.
+
+## Drawing in the world
+
+Read from source. Nothing in this section has run.
+
+Visor draws its own world-space elements in three stages of each render pass, named by `RenderPipelineStage`: `AFTER_SOLID`, `AFTER_TRANSLUCENT`, and `AFTER_WORLD`. `VRRenderPass` lists the passes: `EYE_LEFT`, `EYE_RIGHT`, `CENTER`, `THIRD_PERSON`, and `GUI`. A handler runs once for each pass that draws the world. An addon can draw at two places.
+
+- `RenderPipelineStageVREvent` fires after Visor's drawing for each stage. It carries the stage, the `VRRenderPass`, the `PoseStack`, and the partial tick. A listener implements `VREventListener`, marks a method with `@VREventHandler`, and registers with `VisorAPI.eventBus().registerListener(addon, listener)`. `BowAimCrosshairRenderer` in VisorEssentials draws its crosshair this way.
+- A `VRGameEffect` subclass with `@RegisterVRGameEffect` has `render(renderPass, poseStack, partialTicks)`, which Visor calls during `AFTER_WORLD`. Visor calls it when `isVisible` returns true and either `isGlobal()` returns true or the current `VRDecorator` lists the effect's id. `GameEffectTrackerDebug` in `visor-core` draws axis markers on body trackers this way. A constant turns it off, and it uses helpers from `visor-core`.
+
+Both examples draw the same way:
+
+1. Take the pose for the frame from `VisorAPI.client().getVRLocalPlayer().getPoseData(PlayerPoseType.RENDER)`. Its positions are in world space. `getGripHand(HandType)` gives the grip pose of a hand.
+2. Take the camera from `getCameraPose(renderPass)`.
+3. Push the `PoseStack`, set it to identity, multiply by the transpose of the camera rotation, and translate by the target position minus the camera position.
+4. Emit vertices with `McVertexBuilder`, and set shader and GL state with `McShaders` and `McGlState`. All three are in `org.vmstudio.visor.api.compatibility.mcversion.render`.
+5. Pop the `PoseStack` and restore every GL state that changed.
+
+The event handler should return early when `VisorAPI.clientState().stateMode().isNotActive()`.
 
 ## What Visor does not provide
 

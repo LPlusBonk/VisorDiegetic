@@ -71,6 +71,8 @@ maven.modrinth:visor:<visor version>+mc<minecraft version>-fabric:api
 
 The `api` classifier is the compile dependency. The same coordinate without the classifier is the full mod and is a runtime dependency only.
 
+The `api` jar bundles AtumVR and AtumConfiguration, the libraries under `me.phoenixra` that Visor's API types refer to. They need no dependency of their own.
+
 Code in this mod imports from `org.vmstudio.visor.api` and never from `org.vmstudio.visor.core`. When something exists only in core, reimplement it or reach it with a mixin, and record the dependency in [VISOR.md](VISOR.md).
 
 ## Reading Minecraft and Visor source
