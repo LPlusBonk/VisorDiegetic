@@ -30,7 +30,7 @@ public class DebugHandGizmos extends VisorTask {
 
     @Override
     public @NotNull String getId() {
-        return null;
+        return "debug_hand_gizmos";
     }
 
     @Override
@@ -46,10 +46,10 @@ public class DebugHandGizmos extends VisorTask {
     protected void onRun(@Nullable LocalPlayer arg0) {
         VRPlayerPoseClient pose = VisorAPI.client().getVRLocalPlayer().getPoseData();
         VRPose handMain = pose.getGripHand(HandType.MAIN);
-        VRPose handOff = pose.getGripHand(HandType.MAIN);
+        VRPose handOff = pose.getGripHand(HandType.OFFHAND);
         Vec3 posMain = handMain.getPositionVec3();
         Vec3 posOff = handOff.getPositionVec3();
-        Gizmos.point(posMain, 0xFFFF0000, 8f).setAlwaysOnTop();
+        Gizmos.point(posMain, 0xFF00FF00, 8f).setAlwaysOnTop();
         Gizmos.point(posOff, 0xFFFF0000, 8f).setAlwaysOnTop();
     }
 
