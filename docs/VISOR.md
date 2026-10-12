@@ -113,7 +113,23 @@ Visor draws its own world-space elements in three stages of each render pass, na
 - `RenderPipelineStageVREvent` fires after Visor's drawing for each stage. It carries the stage, the `VRRenderPass`, the `PoseStack`, and the partial tick. A listener implements `VREventListener`, marks a method with `@VREventHandler`, and registers with `VisorAPI.eventBus().registerListener(addon, listener)`. `BowAimCrosshairRenderer` in VisorEssentials draws its crosshair this way.
 - A `VRGameEffect` subclass with `@RegisterVRGameEffect` has `render(renderPass, poseStack, partialTicks)`, which Visor calls during `AFTER_WORLD`. Visor calls it when `isVisible` returns true and either `isGlobal()` returns true or the current `VRDecorator` lists the effect's id. `GameEffectTrackerDebug` in `visor-core` draws axis markers on body trackers this way. A constant turns it off, and it uses helpers from `visor-core`.
 
-Visor's API has no helper that draws a debug marker at a position. Minecraft 26.3 has one in `net.minecraft.gizmos.Gizmos`, with `point`, `line`, `arrow`, `cuboid`, `circle`, and `billboardText`. Each takes world-space positions and returns a `GizmoProperties` with `setAlwaysOnTop()` and `persistForMillis(int)`. A gizmo call throws `IllegalStateException` when the calling thread has no `GizmoCollector`, and Minecraft sets one only around parts of the frame. Whether a gizmo added from an addon appears in the headset is not yet known. Signatures were read with `javap`, and nothing ran.
+Visor's API has no helper that draws a debug marker at a position. Minecraft 26.3 has one in `net.minecraft.gizmos.Gizmos`, with `point`, `line`, `arrow`, `cuboid`, `circle`, and `billboardText`. Each takes world-space positions and returns a `GizmoProperties` with `setAlwaysOnTop()` and `persistForMillis(int)`. A gizmo call throws `IllegalStateException` when the calling thread has no `GizmoCollector`. This was read from Minecraft's bytecode with `javap` and from Visor's source, and nothing ran.
+
+Minecraft has three collectors:
+
+| Collector             | Open during                                             | Lifetime of a gizmo                                   |
+| --------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
+| Per tick              | `Minecraft.tick()` and the packet and task queue before it | Until the next frame in which a client tick runs      |
+| Per frame, main thread | `GameRenderer.update` and `GameRenderer.extract`        | One world extract, unless `persistForMillis` extends it |
+| Per frame, render thread | `GameRenderer.render`                                 | Until the next world render                           |
+
+`LevelExtractor.extract` copies the latest tick's gizmos and the main-thread gizmos to the render-thread collector. `LevelRenderer` drains that collector and draws it on every world render.
+
+Visor renders each pass through `McRenderUtils.renderGame`, which opens both per-frame collectors and runs a full extract and render. The tick gizmos are copied again on every extract, so a gizmo added during a tick is drawn in every pass, including both eyes. It moves 20 times a second, so a marker on a hand trails the hand.
+
+A gizmo added from a `RenderPipelineStageVREvent` handler lands in the render-thread collector after that pass has drained it. The next pass draws it, with the wrong eye's data. `RenderPhaseStartedVREvent` fires when the phase changes and not for each eye. No hook for a per-eye gizmo turned up.
+
+For code that runs on a tick, a `VisorTask` with `@RegisterVisorTask` and `getType()` returning `TaskType.VR_PLAYER_TICK` fits. Visor calls it from a mixin into `LocalPlayer.aiStep`, which runs inside `Minecraft.tick()`. It runs only while VR is active and the local player ticks, so it needs no check that a world is loaded. `isActive(player)` is the place for further conditions.
 
 Both examples draw the same way:
 
